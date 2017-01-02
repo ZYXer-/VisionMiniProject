@@ -55,6 +55,9 @@ else
     assert(false);
 end
 
+% initializeVO
+
+
 %% Continuous operation
 range = (bootstrap_frames(2)+1):last_frame;
 for i = range
@@ -70,9 +73,12 @@ for i = range
             sprintf('/images/img_%05d.png',i)])));
     else
         assert(false);
+        
     end
     % Makes sure that plots refresh.    
     pause(0.01);
+    
+    % processFrame
     
     prev_img = image;
 end

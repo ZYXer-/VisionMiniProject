@@ -1,4 +1,4 @@
-function [ output_args ] = initializeVO( input_args )
+function [ cameraPose, initialState ] = initializeVO( initialFrame, secondFrame )
 %INITIALIZEVO Summary of this function goes here
 %   Detailed explanation goes here
 
