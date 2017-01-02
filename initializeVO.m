@@ -1,5 +1,5 @@
 function [ cameraPose, initialState ] = initializeVO( initialFrame, secondFrame )
-%INITIALIZEVO Summary of this function goes here
+%INITIALIZEVO - takes in two frames, outputs initial camera pose and 2D->3D world state
 %   Detailed explanation goes here
 
 
