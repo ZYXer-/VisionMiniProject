@@ -1,6 +1,5 @@
-function [transformWorld2Camera, State] = initializeVO( input_args )
-%INITIALIZEVO Summary of this function goes here
-%   Detailed explanation goes here
+function [ transformWorld2Camera, initialState ] = initializeVO( initialFrame, secondFrame )
+
 
 
 end
