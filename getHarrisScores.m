@@ -1,12 +1,12 @@
-function [ harrisScores ] = getHarrisScores( image, patchSize, kappa )
+function [ harrisScores ] = getHarrisScores( image, patchSize, traceWeight )
 
     % sobel filters
     sobelX = [ -1 0 1; -2 0 2; -1 0 1 ]; 
-    sobelY = dx.'; 
+    sobelY = sobelX.'; 
     
     % image derivates
-    dX = conv2(sobelX, image, 'valid');
-    dY = conv2(sobelY, image, 'valid');
+    dX = conv2(image, sobelX, 'valid');
+    dY = conv2(image, sobelY, 'valid');
     
     % covert to double
     dX = double(dX);
@@ -17,16 +17,26 @@ function [ harrisScores ] = getHarrisScores( image, patchSize, kappa )
     dXdY = dX .* dY; 
     dYdY = dY .* dY; 
     
-    % weights for patch
+    % get patch sums
     weightsForSum = ones(patchSize) / (patchSize^2);
-    dXdXsum = conv2(weightsForSum, dXdX, 'valid');
-    dXdYsum = conv2(weightsForSum, dXdY, 'valid');
-    dYdYsum = conv2(weightsForSum, dYdY, 'valid');
+    dXdXsum = conv2(dXdX, weightsForSum, 'valid');
+    dXdYsum = conv2(dXdY, weightsForSum, 'valid');
+    dYdYsum = conv2(dYdY, weightsForSum, 'valid');
     
-    % calculate scores;
-    determinant = (dXdXsum * dYdYsum) - (dXdYsum * dXdYsum);
+    % calculate scores
+    determinant = (dXdXsum .* dYdYsum) - (dXdYsum .* dXdYsum);
     trace = dXdXsum + dYdYsum;
-    harrisScores = determinant - (kappa * trace * trace);
+    harrisScores = determinant - (traceWeight * (trace .* trace));
+    
+    % pad scores so that there is a score for each pixel
+    imageSize = size(image);
+    scoresSize = size(harrisScores);
+    padVertical = floor((imageSize(1) - scoresSize(1)) / 2.0);
+    padHorizontal = floor((imageSize(2) - scoresSize(2)) / 2.0);
+    harrisScores = padarray(harrisScores, [padVertical, padHorizontal]);
+    
+    % set all negative values to zero
+    harrisScores(harrisScores < 0) = 0;
 
 end
 
