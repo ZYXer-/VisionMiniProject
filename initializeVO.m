@@ -5,22 +5,20 @@ function [ transformWorld2Camera, initialState ] = initializeVO( initialFrame, s
 clear all;
 close all;
 
-harris_patch_size = 9;
-harris_kappa = 0.08;
-num_keypoints = 200;
-nonmaximum_supression_radius = 8;
+harrisPatchSize = 9;
+harrisTraceWeight = 0.08;
+numOfKeypoints = 200;
+minKeypointDistance = 8;
 descriptor_radius = 9;
 match_lambda = 4;
 
 %% Initial image processing
 
 % Calculate Harris scores
-harris_scores = getHarrisScores(initialFrame, harris_patch_size, harris_kappa);
-assert(min(size(harris_scores) == size(initialFrame)));
+harrisScores = getHarrisScores(initialFrame, harrisPatchSize, harrisTraceWeight);
 
 % Select keypoints
-keypoints = selectKeypoints(...
-    harris_scores, num_keypoints, nonmaximum_supression_radius);
+keypoints = selectKeypoints(harrisScores, numOfKeypoints, minKeypointDistance);
 
 % Describe keypoints
 descriptors = describeKeypoints(img, keypoints, descriptor_radius);
