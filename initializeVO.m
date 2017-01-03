@@ -2,35 +2,63 @@ function [ transformWorld2Camera, initialState ] = initializeVO( initialFrame, s
 %INITIALIZEVO - takes in two frames, outputs initial camera pose and 2D->3D world state
 %   Detailed explanation goes here
 
-clear all;
-close all;
 
+%% Constants
+
+% constants for Harris scores
 harrisPatchSize = 9;
 harrisTraceWeight = 0.08;
+
+% constants for keypoint selection
 numOfKeypoints = 200;
 minKeypointDistance = 8;
-descriptor_radius = 9;
-match_lambda = 4;
 
-%% Initial image processing
+% constants for descriptor generaton
+descriptorRadius = 9;
 
-% Calculate Harris scores
-harrisScores = getHarrisScores(initialFrame, harrisPatchSize, harrisTraceWeight);
+% multiplier of minimum match distance for matching threshold 
+matchLambda = 5;
 
-% Select keypoints
-keypoints = selectKeypoints(harrisScores, numOfKeypoints, minKeypointDistance);
 
-% Describe keypoints
-descriptors = describeKeypoints(img, keypoints, descriptor_radius);
+%% Getting Descriptors for initial frame
+
+% calculate Harris scores
+harrisScores1 = getHarrisScores(initialFrame, harrisPatchSize, harrisTraceWeight);
+
+% select keypoints
+keypoints1 = selectKeypoints(harrisScores1, numOfKeypoints, minKeypointDistance);
+
+% get keypoint descriptors
+descriptors1 = getDescriptors(initialFrame, keypoints1, descriptorRadius);
+
+
+%% Getting Descriptors for second frame
+
+% calculate Harris scores
+harrisScores2 = getHarrisScores(secondFrame, harrisPatchSize, harrisTraceWeight);
+
+% select keypoints
+keypoints2 = selectKeypoints(harrisScores2, numOfKeypoints, minKeypointDistance);
+
+% get keypoint descriptors
+descriptors2 = getDescriptors(secondFrame, keypoints2, descriptorRadius);
+
+
 
 %% Match descriptors between first two images
 
-harris_scores_2 = getHarrisScores(secondFrame, harris_patch_size, harris_kappa);
-keypoints_2 = selectKeypoints(...
-    harris_scores_2, num_keypoints, nonmaximum_supression_radius);
-descriptors_2 = describeKeypoints(secondFrame, keypoints_2, descriptor_radius);
+correspondences = getCorrespondences(descriptors1, descriptors2, matchLambda);
 
-matches = matchDescriptors(descriptors_2, descriptors, match_lambda);
+
+%% DEBUGGING
+figure(4);
+imshow(secondFrame);
+hold on;
+plot(keypoints1(2, :), keypoints1(1, :), 'rx', 'Linewidth', 2);
+plot(keypoints2(2, :), keypoints2(1, :), 'yx', 'Linewidth', 2);
+plotMatches(correspondences, keypoints2, keypoints1);
+
+
 
 %% Stereo matching to establish correspondences 
 

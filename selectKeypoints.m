@@ -8,7 +8,7 @@ function keypoints = selectKeypoints(harrisScores, numOfKeypoints, minKeypointDi
     paddedScoresSize = size(paddedScores);
     
     % For each keypoint
-    for i =  1: numOfKeypoints
+    for i = 1 : numOfKeypoints
         
         % Get pixel with highest harris value
         [~, newKeypointIndex] = max(paddedScores(:));
