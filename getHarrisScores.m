@@ -1,12 +1,15 @@
-function [ harrisScores ] = getHarrisScores( image, patchSize, traceWeight )
+function [ harrisScores ] = getHarrisScores( frame, patchSize, traceWeight )
+
+    % convert frame to double
+    frame = double(frame);
 
     % sobel filters
     sobelX = [ -1 0 1; -2 0 2; -1 0 1 ]; 
     sobelY = sobelX.'; 
     
     % image derivates
-    dX = conv2(image, sobelX, 'valid');
-    dY = conv2(image, sobelY, 'valid');
+    dX = conv2(frame, sobelX, 'valid');
+    dY = conv2(frame, sobelY, 'valid');
     
     % covert to double
     dX = double(dX);
@@ -29,7 +32,7 @@ function [ harrisScores ] = getHarrisScores( image, patchSize, traceWeight )
     harrisScores = determinant - (traceWeight * (trace .* trace));
     
     % pad scores so that there is a score for each pixel
-    imageSize = size(image);
+    imageSize = size(frame);
     scoresSize = size(harrisScores);
     padVertical = floor((imageSize(1) - scoresSize(1)) / 2.0);
     padHorizontal = floor((imageSize(2) - scoresSize(2)) / 2.0);
