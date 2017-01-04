@@ -38,6 +38,6 @@ end
 F = reshape(V(:,9),3,3);
 
 % Enforce det(F)=0 by projecting F onto the set of 3x3 singular matrices
-[u,s,v]=svd(F);
-s(3,3)=0;
-F=u*s*v';
+%[u,s,v]=svd(F);
+%s(3,3)=0;
+%F=u*s*v';

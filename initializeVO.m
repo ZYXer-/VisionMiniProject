@@ -73,31 +73,28 @@ p2 = [x2; y2; oneVec];
 F = fundamentalEightPoint(p1,p2);
 
 % will need to pull this from each dataset (e.g. K.txt, calib.txt, etc)
-K = [1379.74 0 760.35
-    0 1382.08 503.41
-    0 0 1 ];
+K = [7.188560000000e+02 0 6.071928000000e+02
+        0 7.188560000000e+02 1.852157000000e+02
+        0 0 1];
 
 E = estimateEssentialMatrix(p1, p2, K, K);
 
 % Extract the relative camera positions (R,T) from the essential matrix
-
 % Obtain extrinsic parameters (R,t) from E
 [Rotations,Translation] = decomposeEssentialMatrix(E);
 
 % Disambiguate among the four possible configurations (find the "real"
 % config)
-[R_C2_W,T_C2_W] = disambiguateRelativePose(Rotations,Translation,p1,p2,K,K);
+[R_C2_W,T_C2_W] = disambiguateRelativePose(Rotations,Translation,p1,p2,K);
 
 % Triangulate a point cloud using the final transformation (R,T)
 M1 = K * eye(3,4);
 M2 = K * [R_C2_W, T_C2_W];
-P = linearTriangulation(p1,p2,M1,M2);
+P = linearTriangulation(p1,p2,M1,M2);   % world keypoints
 disp(P);
 
 % Visualize the 3-D scene
 figure(1),
-
-% R,T should encode the pose of camera 2, such that M1 = [I|0] and M2=[R|t]
 
 % P is a [4xN] matrix containing the triangulated point cloud (in
 % homogeneous coordinates), given by the function linearTriangulation
@@ -116,9 +113,11 @@ axis equal
 rotate3d on;
 %grid
 
+transformWorld2Camera = T_C2_W;
+initialState = P;
+
 %% Remove outliers
-% is this really necessary for initialization, or can we get by with just using
-% the "best" matches? 
+% RANSAC
 
 %% Triangulate the keypoint correspondences (2D x 2 -> 3D)
 %exercise 4 part 4
