@@ -12,7 +12,7 @@ function correspondences = getCorrespondences(descriptors1, descriptors2, lambda
     sortedNonZeroDistances = sortedDistances(sortedDistances ~= 0);
     minimumNonZeroDistance = sortedNonZeroDistances(1);
     
-    % Set threshold based on lamda and smallest non-zero distance
+    % Set threshold based on lambda and smallest non-zero distance
     threshold = lambda * minimumNonZeroDistance;
 
     % Set all matches to zero where distance is above threshold
