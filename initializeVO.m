@@ -58,18 +58,28 @@ plot(keypoints1(2, :), keypoints1(1, :), 'rx', 'Linewidth', 2);
 plot(keypoints2(2, :), keypoints2(1, :), 'yx', 'Linewidth', 2);
 plotMatches(correspondences, keypoints2, keypoints1);
 
+
+%% NEW STUFF
+
 addpath('8point/');
 addpath('triangulation/');
 addpath('plot/');
-% need to pull and homogenize 2d coordinates from correspondences
-[~, queryIndices, matchIndices] = find(correspondences);
-x2 = keypoints2(1, queryIndices);
-x1 = keypoints1(1, matchIndices);
-y2 = keypoints2(2, queryIndices);
-y1 = keypoints1(2, matchIndices);
-oneVec = ones(size(x1));
-p1 = [x1; y1; oneVec];  % these need to be U V 1, not X Y 
-p2 = [x2; y2; oneVec];
+
+
+% get homogenized coordinates for all correspondences
+[~, indices2, indices1] = find(correspondences);
+
+x1 = keypoints1(1, indices1);
+y1 = keypoints1(2, indices1);
+p1 = [x1; y1; ones(size(x1))];
+
+x2 = keypoints2(1, indices2);
+y2 = keypoints2(2, indices2);
+p2 = [x2; y2; ones(size(x1))];
+
+
+  % these need to be U V 1, not X Y 
+
 F = fundamentalEightPoint(p1,p2);
 
 % will need to pull this from each dataset (e.g. K.txt, calib.txt, etc)
