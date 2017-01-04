@@ -1,12 +1,15 @@
-function plotMatches(matches, query_keypoints, database_keypoints)
+function plotMatches(matches, keypoints2, keypoints1)
 
-[~, query_indices, match_indices] = find(matches);
+% find nonzero elements in matches, pull locations
+[~, queryIndices, matchIndices] = find(matches);
 
-x_from = query_keypoints(1, query_indices);
-x_to = database_keypoints(1, match_indices);
-y_from = query_keypoints(2, query_indices);
-y_to = database_keypoints(2, match_indices);
-plot([y_from; y_to], [x_from; x_to], 'g-', 'Linewidth', 3);
+% draw lines from new keypoint to old keypoint
+xFrom = keypoints2(1, queryIndices);
+xTo = keypoints1(1, matchIndices);
+yFrom = keypoints2(2, queryIndices);
+yTo = keypoints1(2, matchIndices);
+disp(xFrom);
+plot([yFrom; yTo], [xFrom; xTo], 'g-', 'Linewidth', 3);
 
 end
 
