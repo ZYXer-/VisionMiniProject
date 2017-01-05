@@ -2,7 +2,11 @@ function [ newCameraPose, newState ] = processFrame( prevCameraPose, newFrame, p
 %PROCESSFRAME 
 %   should we save the old camera pose before every re-iteration (in main?)? (only takes
 %   in initial from initializeVO)
-
+%   input: 
+%       prevState
+%        - 3D landmarks and descriptor (for each, from last detection)
+%        - 2D keypoints
+       
 
 % what do we want to "pass forward"? Just the pixel coordinates on
 % prevImage, or the full descriptor sets? 
