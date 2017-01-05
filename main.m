@@ -56,10 +56,10 @@ else
 end
 
 % initializeVO
-
+[transformWorld2Camera,currentState] = initializeVO(initialFrame,secondFrame);
 
 %% Continuous operation
-range = (bootstrap_frames(2)+1):last_frame;
+range = (bootstrap_frames(2)+1):last_frame; % for everything after boot frames...
 for i = range
     fprintf('\n\nProcessing frame %d\n=====================\n', i);
     if ds == 0
@@ -72,9 +72,12 @@ for i = range
         image = im2uint8(rgb2gray(imread([parking_path ...
             sprintf('/images/img_%05d.png',i)])));
     else
-        assert(false);
-        
+        assert(false); 
     end
+    % process the new frame (image) from the sequence
+    [transformWorld2Camera,currentState] = ...
+            processFrame(transformWorld2Camera,image,currentState);
+    
     % Makes sure that plots refresh.    
     pause(0.01);
     

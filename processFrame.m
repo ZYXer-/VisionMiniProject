@@ -5,16 +5,48 @@ function [ newCameraPose, newState ] = processFrame( prevCameraPose, newFrame, p
 %   input: 
 %       prevState
 %        - 3D landmarks and descriptor (for each, from last detection)
-%        - 2D keypoints
+%            - u v w 1 descriptorVector         <-- note: already homogeneous
+%        - 2D keypoints from prev frame
        
 
 % what do we want to "pass forward"? Just the pixel coordinates on
 % prevImage, or the full descriptor sets? 
 
-%% Match descriptors between current image and previous image
+%% Constants
 
-%% Stereo matching to establish correspondences 
-% ? is this necessary? 
+% constants for Harris scores
+harrisPatchSize = 9;
+harrisTraceWeight = 0.08;
+
+% constants for keypoint selection
+numOfKeypoints = 200;
+minKeypointDistance = 8;
+
+% constants for descriptor generation
+descriptorRadius = 9;
+
+% multiplier of minimum match distance for matching threshold 
+matchLambda = 5;
+
+%% Pull descriptors for new frame
+
+% calculate Harris scores
+harrisScores = getHarrisScores(newFrame, harrisPatchSize, harrisTraceWeight);
+
+% select keypoints
+newKeypoints = selectKeypoints(harrisScores, numOfKeypoints, minKeypointDistance);
+
+% get keypoint descriptors
+newDescriptors = getDescriptors(newFrame, newKeypoints, descriptorRadius);
+
+
+%% Match descriptors between new frame and previous frame
+
+% extract descriptor image vectors
+landmarkDescriptors = prevState(5:size(prevState,1),:);
+
+correspondences = getCorrespondences(landmarkDescriptors, newDescriptors, matchLambda);
+
 
 %% Remove outliers
 % RANSAC
