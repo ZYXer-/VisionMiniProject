@@ -59,7 +59,9 @@ plot(keypoints2(2, :), keypoints2(1, :), 'yx', 'Linewidth', 2);
 plotMatches(correspondences, keypoints2, keypoints1);
 
 
-%% NEW STUFF
+%% Triangulation and outlier removal for initial landmarks
+%(2D x 2 -> 3D)
+%uses the 8-point algorithm and RANSAC
 
 addpath('8point/');
 addpath('triangulation/');
@@ -76,11 +78,6 @@ p1 = [x1; y1; ones(size(x1))];
 x2 = keypoints2(1, indices2);
 y2 = keypoints2(2, indices2);
 p2 = [x2; y2; ones(size(x1))];
-
-
-  % these need to be U V 1, not X Y 
-
-F = fundamentalEightPoint(p1,p2);
 
 % will need to pull this from each dataset (e.g. K.txt, calib.txt, etc)
 K = [7.188560000000e+02 0 6.071928000000e+02
@@ -101,6 +98,9 @@ E = estimateEssentialMatrix(p1, p2, K, K);
 M1 = K * eye(3,4);
 M2 = K * [R_C2_W, T_C2_W];
 P = linearTriangulation(p1,p2,M1,M2);   % world keypoints
+
+%% Plot
+
 disp(P);
 
 % Visualize the 3-D scene
@@ -125,13 +125,6 @@ rotate3d on;
 
 transformWorld2Camera = T_C2_W;
 initialState = P;
-
-%% Remove outliers
-% RANSAC
-
-%% Triangulate the keypoint correspondences (2D x 2 -> 3D)
-%exercise 4 part 4
-%exercise 5 2-view geometry
 
 end
 
