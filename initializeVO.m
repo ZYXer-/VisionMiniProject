@@ -123,7 +123,7 @@ axis equal
 rotate3d on;
 %grid
 
-transformWorld2Camera = T_C2_W;
+transformWorld2Camera = [R_C2_W,T_C2_W];
 initialState = P;
 
 end

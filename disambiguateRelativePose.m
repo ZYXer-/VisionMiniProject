@@ -3,44 +3,43 @@
 % lying in front of the image plane (with positive depth).
 %
 % Arguments:
-%   Rots -  3x3x2: the two possible rotations returned by decomposeEssentialMatrix
-%   u3   -  a 3x1 vector with the translation information returned by decomposeEssentialMatrix
-%   p1   -  3xN homogeneous coordinates of point correspondences in image 1
-%   p2   -  3xN homogeneous coordinates of point correspondences in image 2
-%   K1   -  3x3 calibration matrix for camera 1
-%   K2   -  3x3 calibration matrix for camera 2
+%   rotations           -  3x3x2: the two possible rotations returned by decomposeEssentialMatrix
+%   translation   -  a 3x1 vector with the translation information returned by decomposeEssentialMatrix
+%   p1          -  3xN homogeneous coordinates of point correspondences in image 1
+%   p2          -  3xN homogeneous coordinates of point correspondences in image 2
+%   K          -  3x3 calibration matrix for the camera
 %
 % Returns:
 %   R -  3x3 the correct rotation matrix
 %   T -  3x1 the correct translation vector
 %
 %   where [R|t] = T_C2_W = T_C2_C1 is a transformation that maps points
-%   from the world coordinate system (identical to the coordinate system of camera 1)
-%   to camera 2.
+%   from the world coordinate system (coordinate system of image 1) to the
+%   coordinate system of image 2
 %
 
-function [R,T] = disambiguateRelativePose(Rotations,decomposedEM,p1,p2,K)
+function [R,T] = disambiguateRelativePose(rotations,translation,p1,p2,K)
 
 M1 = K * eye(3,4); % Projection matrix of camera
 
-HighestPositiveDepthCount = 0;
+highestPositiveDepthCount = 0;
 for iRotation = 1:2
-    RotationTest = Rotations(:,:,iRotation);
+    rotationTest = rotations(:,:,iRotation);
     
     for iSignT = 1:2
-        T_test = decomposedEM * (-1)^iSignT;
+        T_test = translation * (-1)^iSignT;
         
-        M2 = K * [RotationTest, T_test];
+        M2 = K * [rotationTest, T_test];
         P_test = linearTriangulation(p1,p2,M1,M2);
         
         PositiveDepthCount = sum(P_test(3,:) > 0);
         disp(PositiveDepthCount);      
-        if (PositiveDepthCount > HighestPositiveDepthCount)
+        if (PositiveDepthCount > highestPositiveDepthCount)
             % Keep the rotation that gives the highest number of points
             % in front of both cameras
-            R = RotationTest;
+            R = rotationTest;
             T = T_test;
-            HighestPositiveDepthCount = PositiveDepthCount;
+            highestPositiveDepthCount = PositiveDepthCount;
         end
     end
 end
