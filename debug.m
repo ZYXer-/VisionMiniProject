@@ -24,7 +24,7 @@
 
 initialFrame = imread('kitti/00/image_0/000000.png');
 %initialFrame = imread('parking/images/img_00047.png');
-secondFrame = imread('kitti/00/image_0/000002.png');
+secondFrame = imread('kitti/00/image_0/000004.png');
 %secondFrame = imread('kitti/00/image_1/000000.png');
 %secondFrame = imread('parking/images/img_00050.png');
 

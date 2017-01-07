@@ -18,7 +18,7 @@ function F = fundamentalEightPoint_normalized(p1, p2)
 
 % Linear solution
 F = fundamentalEightPoint(x1_nh,x2_nh);
-
+F
 % Undo the normalization
 F = (T2.') * F * T1;
 

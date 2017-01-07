@@ -10,7 +10,7 @@ harrisPatchSize = 9;
 harrisTraceWeight = 0.08;
 
 % constants for keypoint selection
-numOfKeypoints = 200;
+numOfKeypoints = 500;
 minKeypointDistance = 8;
 
 % constants for descriptor generaton
@@ -44,6 +44,18 @@ keypoints2 = selectKeypoints(harrisScores2, numOfKeypoints, minKeypointDistance)
 descriptors2 = getDescriptors(secondFrame, keypoints2, descriptorRadius);
 
 
+	% initialize point tracker
+	pointTracker = vision.PointTracker;
+	initialize(pointTracker, fliplr(keypoints1'), initialFrame);
+    
+	% get keypoint correspondences by doing a step with second frame
+	[trackedPoints, trackedPointValidity] = step(pointTracker, secondFrame);
+	keypoints2 = fliplr(trackedPoints)';
+    
+    	% remove all keypoints which aren't valid
+	keypoints1 = keypoints1(:, trackedPointValidity == 1);
+	keypoints2 = keypoints2(:, trackedPointValidity == 1);
+
 
 %% Match descriptors between first two images
 
@@ -56,7 +68,7 @@ imshow(secondFrame);
 hold on;
 plot(keypoints1(2, :), keypoints1(1, :), 'rx', 'Linewidth', 2);
 plot(keypoints2(2, :), keypoints2(1, :), 'yx', 'Linewidth', 2);
-plotMatches(correspondences, keypoints2, keypoints1);
+%plotMatches(correspondences, keypoints2, keypoints1);
 
 
 %% Triangulation and outlier removal for initial landmarks
@@ -69,22 +81,26 @@ addpath('plot/');
 
 
 % get homogenized coordinates for all correspondences
-[~, indices2, indices1] = find(correspondences);
+%[~, indices2, indices1] = find(correspondences);
 
-x1 = keypoints1(1, indices1);
-y1 = keypoints1(2, indices1);
-p1 = [x1; y1; ones(size(x1))];
+%x1 = keypoints1(1, indices1);
+%y1 = keypoints1(2, indices1);
+%oldp1 = [x1; y1; ones(size(x1))];
 
-x2 = keypoints2(1, indices2);
-y2 = keypoints2(2, indices2);
-p2 = [x2; y2; ones(size(x1))];
+%x2 = keypoints2(1, indices2);
+%y2 = keypoints2(2, indices2);
+%oldp2 = [x2; y2; ones(size(x1))];
+    
 
+	p1 = [keypoints1(1:2, :); ones(1, size(keypoints1, 2))];
+	p2 = [double(keypoints2(1:2, :)); ones(1, size(keypoints2, 2))];
+    
 % will need to pull this from each dataset (e.g. K.txt, calib.txt, etc)
 K = [7.188560000000e+02 0 6.071928000000e+02
         0 7.188560000000e+02 1.852157000000e+02
         0 0 1];
 
-E = estimateEssentialMatrix(p1, p2, K, K);
+E = estimateEssentialMatrix(p1, p2, K);
 
 % Extract the relative camera positions (R,T) from the essential matrix
 % Obtain extrinsic parameters (R,t) from E
@@ -102,6 +118,8 @@ P = linearTriangulation(p1,p2,M1,M2);   % world keypoints
 %% Plot
 
 disp(P);
+disp(R_C2_W);
+disp(T_C2_W);
 
 % Visualize the 3-D scene
 figure(1),

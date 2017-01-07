@@ -42,15 +42,13 @@ harrisScores = getHarrisScores(newFrame, harrisPatchSize, harrisTraceWeight);
 % select keypoints
 newKeypoints = selectKeypoints(harrisScores, numOfKeypoints, minKeypointDistance);
 
-% get keypoint descriptors
-newDescriptors = getDescriptors(newFrame, newKeypoints, descriptorRadius);
 
-
-%% Match descriptors between new frame and previous frame
+%% Match keypoints between new frame and previous frame
 
 % extract landmark descriptor image vectors from previousState
-landmarkDescriptors = prevState(5:size(prevState,1),:);
+%landmarkDescriptors = prevState(5:size(prevState,1),:);
 
+step(State.tracker);
 newCorrespondences = getCorrespondences(landmarkDescriptors, newDescriptors, matchLambda);
 
 
@@ -67,7 +65,7 @@ addpath('plot/');
 [~, indices2, indices1] = find(newCorrespondences);
 
 % world frame landmarks
-p1 = prevState(1:4, indices1);
+%p1 = prevState(1:4, indices1);
 
 % current frame 2D -> homogeneous points
 x2 = keypoints2(1, indices2);
