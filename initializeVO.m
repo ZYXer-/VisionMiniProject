@@ -16,6 +16,10 @@ function [cameraRotation, cameraTranslation, inlierKeypoints, pointTrackerState]
     % constants for keypoint selection
     numOfKeypoints = 1000;
     minKeypointDistance = 6;
+    
+    % constants for RANSAC
+    ransacIterations = 2000;
+    inlierToleranceInPx = 1.0;
 
 
     %% Getting keypoints for initial frame
@@ -56,7 +60,8 @@ function [cameraRotation, cameraTranslation, inlierKeypoints, pointTrackerState]
     
     % using RANSAC get best camera transformation approximation and the inlier keypoints
     [cameraRotation, cameraTranslation, inliers] = performRANSAC( ...
-        homoKeypoints1, homoKeypoints2, K);
+        homoKeypoints1, homoKeypoints2, K, ...
+        ransacIterations, inlierToleranceInPx);
     
     % Remove all outliers
     homoKeypoints1 = homoKeypoints1(:, inliers);
@@ -94,8 +99,8 @@ function [cameraRotation, cameraTranslation, inlierKeypoints, pointTrackerState]
     plotCoordinateFrame(eye(3),zeros(3,1), 0.8);
     text(-0.1,-0.1,-0.1,'Cam 1','fontsize',10,'color','k','FontWeight','bold');
 
-    center_cam2_W = -rotateCam2World' * translateCam2World;
-    plotCoordinateFrame(rotateCam2World', center_cam2_W, 0.8);
+    center_cam2_W = -cameraRotation' * cameraTranslation;
+    plotCoordinateFrame(cameraRotation', center_cam2_W, 0.8);
     text(center_cam2_W(1)-0.1, center_cam2_W(2)-0.1, center_cam2_W(3)-0.1,'Cam 2','fontsize',10,'color','k','FontWeight','bold');
 
     axis equal

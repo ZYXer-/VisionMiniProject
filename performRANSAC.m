@@ -1,40 +1,36 @@
-function [rotateCam2World, translateCam2World, inliers] = performRANSAC(homoKeypoints1, homoKeypoints2, K)
+function [cameraRotation, cameraTranslation, inliers] = performRANSAC(homoKeypoints1, homoKeypoints2, K, ransacIterations, inlierToleranceInPx)
 
+    % convert homogenious keypoints to double for more precision
     homoKeypoints1 = double(homoKeypoints1);
     homoKeypoints2 = double(homoKeypoints2);
-
-    numIterations = 2000;
-    pixel_tolerance = 1;
     
+    % initialize RANSAC.
     fundamentalMat = eye(3);
-
-    % Initialize RANSAC.
     inliers = zeros(1, size(homoKeypoints1, 2));
-    %matched_query_keypoints = flipud(matched_query_keypoints);
     maxNumInliers = 0;
-   
 
     % RANSAC
-    for i = 1 : numIterations
-        [~, sampleIndices] = datasample(homoKeypoints1, 8, 2, 'Replace', false);
+    for i = 1 : ransacIterations
         
+        % get eight samples of keypoints
+        [~, sampleIndices] = datasample(homoKeypoints1, 8, 2, 'Replace', false);
         sample1 = homoKeypoints1(:, sampleIndices);
         sample2 = homoKeypoints2(:, sampleIndices);
         
-        % Normalize each set of homogenious keypoints so that the origin
+        % normalize the eight pairs of keypoints so that the origin
         % is at centroid and mean distance from origin is sqrt(2).
         [sample1, normalizationMat1] = normalize2dPoints(sample1);
         [sample2, normalizationMat2] = normalize2dPoints(sample2);
-
-        %% Get fundamental matrix
         
-        % Get fundamental matrix with 8-point algorithm
+        % get fundamental matrix with 8-point algorithm
         fundamentalMatGuess = getFundamentalMatWithEightPoint(sample1, sample2);
         
+        % remove noramlization
         fundamentalMatGuess = (normalizationMat2.') * fundamentalMatGuess * normalizationMat1;
         
+        
         epiDistance = getEpipolarLineDistance(fundamentalMatGuess, homoKeypoints1, homoKeypoints2);
-        inlierGuess = epiDistance < pixel_tolerance;
+        inlierGuess = epiDistance < inlierToleranceInPx;
                 
         numOfInliers = nnz(inlierGuess);
         
@@ -52,7 +48,7 @@ function [rotateCam2World, translateCam2World, inliers] = performRANSAC(homoKeyp
     essentialMat = K' * fundamentalMat * K;
 
     % Extract the relative camera rotation and translation from the essential matrix
-    [rotateCam2World, translateCam2World] = decomposeEssentialMatrix(essentialMat);
+    [cameraRotation, cameraTranslation] = decomposeEssentialMatrix(essentialMat);
     
     % remove outliers
     homoKeypoints1 = homoKeypoints1(:, inliers);
@@ -60,7 +56,7 @@ function [rotateCam2World, translateCam2World, inliers] = performRANSAC(homoKeyp
 
     % Disambiguate among the four possible configurations (find the "real"
     % config)
-    [rotateCam2World, translateCam2World] = disambiguateRelativePose(rotateCam2World, translateCam2World, homoKeypoints1, homoKeypoints2, K);
+    [cameraRotation, cameraTranslation] = disambiguateRelativePose(cameraRotation, cameraTranslation, homoKeypoints1, homoKeypoints2, K);
     
 end
 

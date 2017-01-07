@@ -30,5 +30,4 @@ for i = range
     % Makes sure that plots refresh.    
     pause(0.01);
 
-    prevFrame = newFrame;
 end

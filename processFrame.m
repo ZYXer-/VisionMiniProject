@@ -67,12 +67,7 @@ keypoints1 = prevKeypoints(:, trackedPointValidity == 1);
 keypoints2 = keypoints2(:, trackedPointValidity == 1);
 
 % plot new frame with keypoint correspondences
-figure(1);
-imshow(newFrame);
-hold on;
-plot(keypoints1(2, :), keypoints1(1, :), 'rx', 'Linewidth', 2);
-plot(keypoints2(2, :), keypoints2(1, :), 'yx', 'Linewidth', 2);
-plotMatches(keypoints2, keypoints1);
+plotMatching(keypoints2, keypoints1, newFrame);
 
 
 %% Triangulation and outlier removal for new landmarks
