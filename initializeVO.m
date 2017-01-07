@@ -1,7 +1,10 @@
-function [ rotateCam2World, translateCam2World, initialState ] = initializeVO( initialFrame, secondFrame )
+function [ rotateCam2World, translateCam2World, inlierKeypoints, initialState ] = ...
+    initializeVO( initialFrame, secondFrame, K )
 %INITIALIZEVO - takes in two frames, outputs initial camera pose and 2D->3D world state
 %   Detailed explanation goes here
 
+    addpath('triangulation/');
+    addpath('plot/');
 
     %% Constants
 
@@ -45,27 +48,12 @@ function [ rotateCam2World, translateCam2World, initialState ] = initializeVO( i
     keypoints2 = keypoints2(:, testIndex);
 
     %% DEBUGGING
-    figure(4);
+    figure(1);
     imshow(secondFrame);
     hold on;
     plot(keypoints1(2, :), keypoints1(1, :), 'rx', 'Linewidth', 2);
     plot(keypoints2(2, :), keypoints2(1, :), 'yx', 'Linewidth', 2);
     plotMatches(keypoints2, keypoints1);
-
-
-    %% Triangulation and outlier removal for initial landmarks
-    %(2D x 2 -> 3D)
-    %uses the 8-point algorithm and RANSAC
-
-    addpath('triangulation/');
-    addpath('plot/');
-
-    %% Camera calibration
-    % will need to pull this from each dataset (e.g. K.txt, calib.txt, etc)
-
-    K = [7.188560000000e+02 0 6.071928000000e+02 
-            0 7.188560000000e+02 1.852157000000e+02
-            0 0 1];
 
 
     %% Find camera transformation
@@ -91,20 +79,20 @@ function [ rotateCam2World, translateCam2World, initialState ] = initializeVO( i
     % Triangulate the keypoints using the transformation obtained from RANSAC
     worldKeypoints = linearTriangulation(homoKeypoints1, homoKeypoints2, camTransform1, camTransform2);
     worldKeypoints = worldKeypoints(:, inliers);
-    validPoints = worldKeypoints(3, : ) > 0 & worldKeypoints(3,:) <= 100;
+    validPoints = worldKeypoints(3, : ) > 0 & worldKeypoints(3,:) <= 25;
     worldKeypoints =  worldKeypoints(:, validPoints);
 
 
     %% Plot
 
     % Visualize the 3-D scene
-    figure(1),
+    figure(2),
 
     % P is a [4xN] matrix containing the triangulated point cloud (in
     % homogeneous coordinates), given by the function linearTriangulation
-    plot3(worldKeypoints(1,:), worldKeypoints(2,:), worldKeypoints(3,:), 'o');
-    grid on;
-    xlabel('x'), ylabel('y'), zlabel('z');
+    %plot3(worldKeypoints(1,:), worldKeypoints(2,:), worldKeypoints(3,:), 'o');
+    %grid on;
+    %xlabel('x'), ylabel('y'), zlabel('z');
 
     % Display camera pose
 
@@ -121,7 +109,10 @@ function [ rotateCam2World, translateCam2World, initialState ] = initializeVO( i
 
     %transformWorld2Camera = T_C2_W;
     
+    inlierKeypoints = keypoints2(1:2, inliers);
     % the initial state is the point tracker after the first step
+    release(pointTracker);
+    initialize(pointTracker, fliplr(inlierKeypoints'), secondFrame);
     initialState = pointTracker;
 
 end

@@ -1,4 +1,5 @@
-function [ newCameraPose, newState ] = processFrame( prevCameraPose, newFrame, prevState )
+function [ rotateCam2World, translateCam2World, newKeypoints, newState ] = ...
+    processFrame( rotateCam2World, translateCam2World, prevKeypoints, prevState, newFrame, K )
 %PROCESSFRAME 
 %   should we save the old camera pose before every re-iteration (in main?)? (only takes
 %   in initial from initializeVO)
@@ -18,6 +19,9 @@ function [ newCameraPose, newState ] = processFrame( prevCameraPose, newFrame, p
 % new image
 % at this point we have 3d world points, from which we can use p3p
 
+addpath('triangulation/');
+addpath('plot/');
+
 %% Constants
 
 % constants for Harris scores
@@ -34,6 +38,10 @@ descriptorRadius = 9;
 % multiplier of minimum match distance for matching threshold 
 matchLambda = 5;
 
+% save old camera pose information
+prevRotateCam2World = rotateCam2World;
+prevTranslateCam2World = translateCam2World;
+
 %% Pull descriptors for new frame
 
 % calculate Harris scores
@@ -48,80 +56,96 @@ newKeypoints = selectKeypoints(harrisScores, numOfKeypoints, minKeypointDistance
 % extract landmark descriptor image vectors from previousState
 %landmarkDescriptors = prevState(5:size(prevState,1),:);
 
-step(State.tracker);
-newCorrespondences = getCorrespondences(landmarkDescriptors, newDescriptors, matchLambda);
+pointTracker = prevState;
+
+% get keypoint correspondences by doing a step with second frame
+[trackedPoints, trackedPointValidity, trackedPointScores] = step(pointTracker, newFrame);
+keypoints2 = fliplr(trackedPoints)';
+
+% remove all keypoints which aren't valid
+keypoints1 = prevKeypoints(:, trackedPointValidity == 1);
+keypoints2 = keypoints2(:, trackedPointValidity == 1);
+
+% plot new frame with keypoint correspondences
+figure(1);
+imshow(newFrame);
+hold on;
+plot(keypoints1(2, :), keypoints1(1, :), 'rx', 'Linewidth', 2);
+plot(keypoints2(2, :), keypoints2(1, :), 'yx', 'Linewidth', 2);
+plotMatches(keypoints2, keypoints1);
 
 
 %% Triangulation and outlier removal for new landmarks
 % 2D currentFrame points + 3D world landmark points for camera pose
 % 2D currentFrame points + 2D previousFrame points -> new 3D w landmarks
 
-addpath('8point/');
-addpath('triangulation/');
-addpath('plot/');
 
+    %% Find camera transformation
 
-% get homogenized coordinates for all correspondences
-[~, indices2, indices1] = find(newCorrespondences);
+    % get homogenized coordinates for all correspondences
+    homoKeypoints1 = [keypoints1(1:2, :); ones(1, size(keypoints1, 2))];
+    homoKeypoints2 = [keypoints2(1:2, :); ones(1, size(keypoints2, 2))];
+    
+    % using RANSAC get best camera transformation approximation and the inlier keypoints
+    [rotateCam2World, translateCam2World, inliers] = performRANSAC(homoKeypoints1, homoKeypoints2, K);
+    
+    
+    %% Triangulate keypoints
 
-% world frame landmarks
-%p1 = prevState(1:4, indices1);
+    % Get camera transformation for previous frame and new frame
+    camTransform1 = K * [prevRotateCam2World, prevTranslateCam2World];
+    camTransform2 = K * [rotateCam2World, translateCam2World];
+    
+    % Triangulate the keypoints using the transformation obtained from RANSAC
+    worldKeypoints = linearTriangulation(homoKeypoints1, homoKeypoints2, camTransform1, camTransform2);
+    worldKeypoints = worldKeypoints(:, inliers);
+    validPoints = worldKeypoints(3, : ) > 0 & worldKeypoints(3,:) <= 25;
+    worldKeypoints =  worldKeypoints(:, validPoints);
 
-% current frame 2D -> homogeneous points
-x2 = keypoints2(1, indices2);
-y2 = keypoints2(2, indices2);
-p2 = [x2; y2; ones(size(x1))];
+    
+    
+    %% compute homogenous transforms
+H_10 = [prevRotateCam2World, prevTranslateCam2World;
+       0, 0, 0, 1];          % frame 0 to 1
+H_01 = H_10\eye(4);          % frame 1 to 0
 
+H_W1 = H_W0*H_01;           % frame 1 to World
 
-% will need to pull this from each dataset (e.g. K.txt, calib.txt, etc)
-K = [7.188560000000e+02 0 6.071928000000e+02
-        0 7.188560000000e+02 1.852157000000e+02
-        0 0 1];
+H_0W = H_W0\eye(4);         % frame World to 0
+H_1W = H_W1\eye(4);         % frame World to 1
+    
 
-E = estimateEssentialMatrix(p1, p2, K, K);
+    %% Plot
 
-% Extract the relative camera positions (R,T) from the essential matrix
-% Obtain extrinsic parameters (R,t) from E
-[Rotations,Translation] = decomposeEssentialMatrix(E);
+    % Visualize the 3-D scene
+    figure(2),
 
-% Disambiguate among the four possible configurations (find the "real"
-% config)
-[R_C2_W,T_C2_W] = disambiguateRelativePose(Rotations,Translation,p1,p2,K);
+    
+    % P is a [4xN] matrix containing the triangulated point cloud (in
+    % homogeneous coordinates), given by the function linearTriangulation
+    %plot3(worldKeypoints(1,:), worldKeypoints(2,:), worldKeypoints(3,:), 'o');
+    %grid on;
+    %xlabel('x'), ylabel('y'), zlabel('z');
 
-% Triangulate a point cloud using the final transformation (R,T)
-M1 = K * eye(3,4);
-M2 = K * [R_C2_W, T_C2_W];
-P = linearTriangulation(p1,p2,M1,M2);   % world keypoints
+    hold on;
+    % Display camera pose
+    rotateCam2World = prevRotateCam2World * rotateCam2World;
+    translateCam2World = prevTranslateCam2World * translateCam2World;
+    center_cam2_W = -rotateCam2World' * translateCam2World;
+    plotCoordinateFrame(rotateCam2World', center_cam2_W, 0.8);
+    text(center_cam2_W(1)-0.1, center_cam2_W(2)-0.1, center_cam2_W(3)-0.1,'Cam','fontsize',10,'color','k','FontWeight','bold');
 
+    axis equal
+    rotate3d on;
+    %grid
 
-
-%% Estimate camera pose
-% PNP - lecture 3
-
-poses = p3p( worldPoints, imageVectors );
-
-%% Plot
-
-disp(P);
-
-% Visualize the 3-D scene
-figure(1),
-
-% P is a [4xN] matrix containing the triangulated point cloud (in
-% homogeneous coordinates), given by the function linearTriangulation
-plot3(P(1,:), P(2,:), P(3,:), 'o');
-
-% Display current camera pose
-center_cam2_W = -R_C2_W'*T_C2_W;
-plotCoordinateFrame(R_C2_W',center_cam2_W, 0.8);
-%text(center_cam2_W(1)-0.1, center_cam2_W(2)-0.1, center_cam2_W(3)-0.1,'Cam','fontsize',10,'color','k','FontWeight','bold');
-
-axis equal
-rotate3d on;
-%grid
-
-newCameraPose = [R_C2_W,T_C2_W];
-newState = P;
+    %transformWorld2Camera = T_C2_W;
+    
+    newKeypoints = keypoints2(1:2, inliers);
+    % the initial state is the point tracker after the first step
+    release(pointTracker);
+    initialize(pointTracker, fliplr(newKeypoints'), newFrame);
+    newState = pointTracker;
 
 
 end
