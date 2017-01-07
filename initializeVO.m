@@ -10,7 +10,7 @@ function [ rotateCam2World, translateCam2World, initialState ] = initializeVO( i
     harrisTraceWeight = 0.08;
 
     % constants for keypoint selection
-    %numOfKeypoints = 201;
+    numOfKeypoints = 400;
     minKeypointDistance = 8;
 
 
