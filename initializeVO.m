@@ -1,10 +1,11 @@
-function [ cameraRotation, cameraTranslation, initialState ] = initializeVO(K, initialFrame, secondFrame, debugging )
+function [cameraRotation, cameraTranslation, inlierKeypoints, pointTrackerState] = ...
+    initializeVO(K, initialFrame, secondFrame, debugging)
 %INITIALIZEVO - takes in two frames, outputs initial camera pose and 2D->3D world state
 %   Detailed explanation goes here
 
     % include plotting functions
     addpath('plot/');
-
+    
 
     %% Constants
 
@@ -34,6 +35,7 @@ function [ cameraRotation, cameraTranslation, initialState ] = initializeVO(K, i
     
     % get keypoint correspondences by doing a step with second frame
     [trackedPoints, trackedPointValidity] = step(pointTracker, secondFrame);
+    release(pointTracker);
     keypoints2 = fliplr(trackedPoints)';
     
     % remove all keypoints which aren't valid
@@ -83,9 +85,9 @@ function [ cameraRotation, cameraTranslation, initialState ] = initializeVO(K, i
 
     % P is a [4xN] matrix containing the triangulated point cloud (in
     % homogeneous coordinates), given by the function linearTriangulation
-    plot3(worldKeypoints(1,:), worldKeypoints(2,:), worldKeypoints(3,:), 'o');
-    grid on;
-    xlabel('x'), ylabel('y'), zlabel('z');
+    %plot3(worldKeypoints(1,:), worldKeypoints(2,:), worldKeypoints(3,:), 'o');
+    %grid on;
+    %xlabel('x'), ylabel('y'), zlabel('z');
 
     % Display camera pose
 
@@ -104,9 +106,13 @@ function [ cameraRotation, cameraTranslation, initialState ] = initializeVO(K, i
     
     
     %% Set up initial state
+   
+    % store inlier keypoints of second frame for continious operation
+    inlierKeypoints = keypoints2(1:2, inliers);
     
-    % the initial state is the point tracker after the first step
-    initialState = pointTracker;
+    % create point tracker state with the second frame and its keypoints
+    pointTrackerState = vision.PointTracker;
+    initialize(pointTrackerState, fliplr(inlierKeypoints'), secondFrame);
 
 end
 
