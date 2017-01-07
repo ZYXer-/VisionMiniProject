@@ -10,8 +10,8 @@ function [ rotateCam2World, translateCam2World, initialState ] = initializeVO( i
     harrisTraceWeight = 0.08;
 
     % constants for keypoint selection
-    numOfKeypoints = 400;
-    minKeypointDistance = 8;
+    numOfKeypoints = 1000;
+    minKeypointDistance = 6;
 
 
     %% Getting keypoints for initial frame
@@ -78,18 +78,24 @@ function [ rotateCam2World, translateCam2World, initialState ] = initializeVO( i
     [rotateCam2World, translateCam2World, inliers] = performRANSAC(homoKeypoints1, homoKeypoints2, K);
     
     
+    rotateCam2World
+    translateCam2World
+    
     
     %% Triangulate keypoints
 
+    % Get camera transformation for initial frame and second frame
+    camTransform1 = K * eye(3,4);
+    camTransform2 = K * [rotateCam2World, translateCam2World];
+    
     % Triangulate the keypoints using the transformation obtained from RANSAC
-    M1 = K * eye(3,4);
-    M2 = K * [rotateCam2World, translateCam2World];
-    worldKeypoints = linearTriangulation(homoKeypoints1, homoKeypoints2, M1, M2);
+    worldKeypoints = linearTriangulation(homoKeypoints1, homoKeypoints2, camTransform1, camTransform2);
+    worldKeypoints = worldKeypoints(:, inliers);
+    validPoints = worldKeypoints(3, : ) > 0 & worldKeypoints(3,:) <= 100;
+    worldKeypoints =  worldKeypoints(:, validPoints);
 
 
     %% Plot
-
-    disp(worldKeypoints);
 
     % Visualize the 3-D scene
     figure(1),
@@ -97,6 +103,8 @@ function [ rotateCam2World, translateCam2World, initialState ] = initializeVO( i
     % P is a [4xN] matrix containing the triangulated point cloud (in
     % homogeneous coordinates), given by the function linearTriangulation
     plot3(worldKeypoints(1,:), worldKeypoints(2,:), worldKeypoints(3,:), 'o');
+    grid on;
+    xlabel('x'), ylabel('y'), zlabel('z');
 
     % Display camera pose
 
@@ -115,10 +123,6 @@ function [ rotateCam2World, translateCam2World, initialState ] = initializeVO( i
     
     % the initial state is the point tracker after the first step
     initialState = pointTracker;
-    
-    translateCam2World
-    
-    rotateCam2World
 
 end
 

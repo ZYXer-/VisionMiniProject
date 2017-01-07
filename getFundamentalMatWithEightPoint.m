@@ -25,8 +25,8 @@ function F = getFundamentalMatWithEightPoint(p1, p2)
     % Compute the measurement matrix A of the linear homogeneous system whose
     % solution is the vector representing the fundamental matrix.
     A = zeros(numPoints1, 9);
-    for i=1:numPoints1
-        A(i,:) = kron(p1(:, i), p2(:, i)).';
+    for i = 1:numPoints1
+        A(i, :) = kron(p1(:, i), p2(:, i)).';
     end
 
     % "Solve" the linear homogeneous system of equations A*f = 0.
@@ -34,5 +34,10 @@ function F = getFundamentalMatWithEightPoint(p1, p2)
     % If measurements are noisy, then rank(A)=9 => there is no exact solution, seek a least-squares solution.
     [~,~,V] = svd(A, 0);
     F = reshape(V(:, 9), 3, 3);
+    
+    % Enforce det(F)=0 by projecting F onto the set of 3x3 singular matrices
+    [u,s,v] = svd(F);
+    s(3, 3) = 0;
+    F = u * s * v';
 
 end

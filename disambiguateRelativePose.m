@@ -19,28 +19,31 @@
 %   to camera 2.
 %
 
-function [R,T] = disambiguateRelativePose(Rotations, decomposedEM, p1, p2, K)
+function [R,T] = disambiguateRelativePose(rotation, translation, p1, p2, K)
 
 M1 = K * eye(3,4); % Projection matrix of camera
 
-HighestPositiveDepthCount = 0;
+highestPositiveDepthCount = 0;
 for iRotation = 1:2
-    RotationTest = Rotations(:,:,iRotation);
+    rotationTest = rotation(:,:,iRotation);
     
     for iSignT = 1:2
-        T_test = decomposedEM * (-1)^iSignT;
+        translationTest = translation * (-1)^iSignT;
         
-        M2 = K * [RotationTest, T_test];
-        P_test = linearTriangulation(p1,p2,M1,M2);
+        M2 = K * [rotationTest, translationTest];
+        testPoints1 = linearTriangulation(p1, p2, M1, M2);
+        testPoints2 = [rotationTest, translationTest] * testPoints1;
         
-        PositiveDepthCount = sum(P_test(3,:) > 0);
-        disp(PositiveDepthCount);      
-        if (PositiveDepthCount > HighestPositiveDepthCount)
+        positiveDepthCount1 = sum(testPoints1(3,:) > 0);
+        positiveDepthCount2 = sum(testPoints2(3,:) > 0);
+        positiveDepthCount = positiveDepthCount1 + positiveDepthCount2;
+
+        if (positiveDepthCount > highestPositiveDepthCount)
             % Keep the rotation that gives the highest number of points
             % in front of both cameras
-            R = RotationTest;
-            T = T_test;
-            HighestPositiveDepthCount = PositiveDepthCount;
+            R = rotationTest;
+            T = translationTest;
+            highestPositiveDepthCount = positiveDepthCount;
         end
     end
 end
