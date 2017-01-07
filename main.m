@@ -1,5 +1,13 @@
 %% Setup
-ds = 0; % 0: KITTI, 1: Malaga, 2: parking
+ds = 1; % 0: KITTI, 1: Malaga, 2: parking
+plotEveryXFrames = 3;
+
+
+bootstrap_frames = [1, 3];
+kitti_path = 'kitti';
+parking_path = 'parking';
+malaga_path = 'malaga';
+
 
 if ds == 0
     % need to set kitti_path to folder containing "00" and "poses"
@@ -56,7 +64,11 @@ else
 end
 
 % initializeVO
-[transformWorld2Camera,currentState] = initializeVO(initialFrame,secondFrame);
+[cameraRotation, cameraTranslation, keypoints, state] = ...
+    initializeVO(K, img0, img1, 1);
+
+locationHistoryForPlot = [0; 0; 0];
+firstPlot = 1;
 
 %% Continuous operation
 range = (bootstrap_frames(2)+1):last_frame; % for everything after boot frames...
@@ -75,8 +87,35 @@ for i = range
         assert(false); 
     end
     % process the new frame (image) from the sequence
-    [transformWorld2Camera,currentState] = ...
-            processFrame(transformWorld2Camera,image,currentState);
+    
+    locationHistoryForPlot = [locationHistoryForPlot, cameraTranslation];
+    doPlot = mod(i, plotEveryXFrames) == 0 || firstPlot;
+    
+    [cameraRotation, cameraTranslation, keypoints, state] = ...
+        processFrame( cameraRotation, cameraTranslation, keypoints, state, image, K, doPlot );
+
+    if doPlot
+        locationHistoryForPlot = [locationHistoryForPlot, cameraTranslation];
+        figure(1),
+        subplot(3, 1, [2; 3]);
+        xlabel('x'), ylabel('y'), zlabel('z');
+        axis equal;
+        rotate3d on;
+        hold on;
+        % Display camera pose
+        % multiply delta rotation and add delta translation
+
+        for j = 1 : (size(locationHistoryForPlot, 2) - 1)
+            xFrom = locationHistoryForPlot(1, j);
+            xTo = locationHistoryForPlot(1, j + 1);
+            yFrom = locationHistoryForPlot(2, j);
+            yTo = locationHistoryForPlot(2, j + 1);
+            plot([yFrom; yTo], [xFrom; xTo], 'b-', 'Linewidth', 2);
+        end
+        
+        locationHistoryForPlot = [];
+        firstPlot = 0;
+    end
     
     % Makes sure that plots refresh.    
     pause(0.01);

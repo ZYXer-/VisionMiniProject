@@ -1,4 +1,4 @@
-function keypoints = selectKeypoints(harrisScores, numOfKeypoints, minKeypointDistance)
+function keypoints = selectKeypoints(harrisScores, numOfKeypoints, minKeypointDistance, discardPoints)
 
     % Create list of keypoints
     keypoints = zeros(2, numOfKeypoints);
@@ -6,6 +6,19 @@ function keypoints = selectKeypoints(harrisScores, numOfKeypoints, minKeypointDi
     % Create padded version of harrisScores
     paddedScores = padarray(harrisScores, [ minKeypointDistance minKeypointDistance ]);
     paddedScoresSize = size(paddedScores);
+    
+    % Fill in area around discarded points
+    if exist('discardPoints', 'var')
+        for i = 1 : size(discardPoints, 2)
+            discardPoint = round(discardPoints(:, i));
+            zerosSize = (minKeypointDistance * 2);
+            paddedScores( ...
+                discardPoint(1) : discardPoint(1) + zerosSize, ...
+                discardPoint(2) : discardPoint(2) + zerosSize) = ...
+                zeros(zerosSize + 1);
+        end
+        
+    end
     
     % For each keypoint
     for i = 1 : numOfKeypoints

@@ -1,7 +1,7 @@
 function plotMatching(keypoints2, keypoints1, frame)
 
     figure(1);
-    subplot(2,2,[1 2]);
+    subplot(3,1,1);
     imshow(frame);
     hold on;
     plot(keypoints1(2, :), keypoints1(1, :), 'rx', 'Linewidth', 2);
@@ -12,6 +12,6 @@ function plotMatching(keypoints2, keypoints1, frame)
     yFrom = keypoints2(2, :);
     yTo = keypoints1(2, :);
     plot([yFrom; yTo], [xFrom; xTo], 'g-', 'Linewidth', 3);
-
+    hold off;
 end
 
