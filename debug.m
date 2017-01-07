@@ -29,4 +29,4 @@ secondFrame = imread('kitti/00/image_0/000002.png');
 %secondFrame = imread('parking/images/img_00050.png');
 
 
-[ transformWorld2Camera, initialState ] = initializeVO( initialFrame, secondFrame );
+[ transformWorld2Camera, initialState ] = initializeVO( initialFrame, secondFrame, 400 );
