@@ -1,6 +1,9 @@
-function [ rotateCam2World, translateCam2World, initialState ] = initializeVO( initialFrame, secondFrame )
+function [ rotateCam2World, translateCam2World, initialState ] = initializeVO( initialFrame, secondFrame, debugging )
 %INITIALIZEVO - takes in two frames, outputs initial camera pose and 2D->3D world state
 %   Detailed explanation goes here
+
+    % include plotting functions
+    addpath('plot/');
 
 
     %% Constants
@@ -17,10 +20,10 @@ function [ rotateCam2World, translateCam2World, initialState ] = initializeVO( i
     %% Getting keypoints for initial frame
 
     % calculate Harris scores
-    harrisScores1 = getHarrisScores(initialFrame, harrisPatchSize, harrisTraceWeight);
+    harrisScores = getHarrisScores(initialFrame, harrisPatchSize, harrisTraceWeight);
 
     % select keypoints
-    keypoints1 = selectKeypoints(harrisScores1, numOfKeypoints, minKeypointDistance);
+    keypoints1 = selectKeypoints(harrisScores, numOfKeypoints, minKeypointDistance);
 
 
     %% Getting keypoints for second frame
@@ -30,35 +33,24 @@ function [ rotateCam2World, translateCam2World, initialState ] = initializeVO( i
     initialize(pointTracker, fliplr(keypoints1'), initialFrame);
     
     % get keypoint correspondences by doing a step with second frame
-    [trackedPoints, trackedPointValidity, trackedPointScores] = step(pointTracker, secondFrame);
+    [trackedPoints, trackedPointValidity] = step(pointTracker, secondFrame);
     keypoints2 = fliplr(trackedPoints)';
     
     % remove all keypoints which aren't valid
     keypoints1 = keypoints1(:, trackedPointValidity == 1);
     keypoints2 = keypoints2(:, trackedPointValidity == 1);
-    
-    % TODO TEST
-    
-    zenorm = sqrt(sum(abs(keypoints1 - keypoints2).^2, 1));
-    testIndex = zenorm > 8.0;
-    keypoints1 = keypoints1(:, testIndex);
-    keypoints2 = keypoints2(:, testIndex);
 
-    %% DEBUGGING
-    figure(4);
-    imshow(secondFrame);
-    hold on;
-    plot(keypoints1(2, :), keypoints1(1, :), 'rx', 'Linewidth', 2);
-    plot(keypoints2(2, :), keypoints2(1, :), 'yx', 'Linewidth', 2);
-    plotMatches(keypoints2, keypoints1);
+    % debug keypoint matching
+    if debugging == 1
+        plotMatching(keypoints2, keypoints1, secondFrame);
+    end
 
 
     %% Triangulation and outlier removal for initial landmarks
     %(2D x 2 -> 3D)
     %uses the 8-point algorithm and RANSAC
 
-    addpath('triangulation/');
-    addpath('plot/');
+    
 
     %% Camera calibration
     % will need to pull this from each dataset (e.g. K.txt, calib.txt, etc)
@@ -98,7 +90,7 @@ function [ rotateCam2World, translateCam2World, initialState ] = initializeVO( i
     %% Plot
 
     % Visualize the 3-D scene
-    figure(1),
+    figure(2),
 
     % P is a [4xN] matrix containing the triangulated point cloud (in
     % homogeneous coordinates), given by the function linearTriangulation
