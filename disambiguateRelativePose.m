@@ -19,7 +19,7 @@
 %   to camera 2.
 %
 
-function [R,T] = disambiguateRelativePose(Rotations,decomposedEM,p1,p2,K)
+function [R,T] = disambiguateRelativePose(Rotations, decomposedEM, p1, p2, K)
 
 M1 = K * eye(3,4); % Projection matrix of camera
 
