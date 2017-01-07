@@ -18,7 +18,7 @@ secondFrame = imread('kitti/00/image_0/000002.png');
 
 
 %% Continuous operation
-range = (2+1):10; % for everything after boot frames...
+range = (2+1):150; % for everything after boot frames...
 for i = range
     fprintf('\n\nProcessing frame %d\n=====================\n', i);
     newFrame = imread(['kitti/00/image_0/' sprintf('%06d.png',i)]);

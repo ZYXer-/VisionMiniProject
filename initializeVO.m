@@ -78,25 +78,28 @@ function [cameraRotation, cameraTranslation, inlierKeypoints, pointTrackerState]
     %% Plot
 
     % Visualize the 3-D scene
-    figure(2),
-    
+    figure(1),
+    subplot(2,2,3);
     validPoints = worldKeypoints(3, :) > 0 & worldKeypoints(3,:) <= 100;
     worldKeypoints =  worldKeypoints(:, validPoints);
 
+    hold on; 
     % P is a [4xN] matrix containing the triangulated point cloud (in
     % homogeneous coordinates), given by the function linearTriangulation
-    %plot3(worldKeypoints(1,:), worldKeypoints(2,:), worldKeypoints(3,:), 'o');
-    %grid on;
-    %xlabel('x'), ylabel('y'), zlabel('z');
+    plot3(worldKeypoints(1,:), worldKeypoints(2,:), worldKeypoints(3,:), 'o');
+    grid on;
+    xlabel('x'), ylabel('y'), zlabel('z');
 
     % Display camera pose
-
+    figure(1),
+    subplot(2,2,4);
+    hold on;
     plotCoordinateFrame(eye(3),zeros(3,1), 0.8);
-    text(-0.1,-0.1,-0.1,'Cam 1','fontsize',10,'color','k','FontWeight','bold');
+    text(-0.1,-0.1,-0.1,'Initial','fontsize',10,'color','k','FontWeight','bold');
 
-    center_cam2_W = -rotateCam2World' * translateCam2World;
-    plotCoordinateFrame(rotateCam2World', center_cam2_W, 0.8);
-    text(center_cam2_W(1)-0.1, center_cam2_W(2)-0.1, center_cam2_W(3)-0.1,'Cam 2','fontsize',10,'color','k','FontWeight','bold');
+    center_cam2_W = -cameraRotation' * cameraTranslation;
+    plotCoordinateFrame(cameraRotation', center_cam2_W, 0.8);
+    %text(center_cam2_W(1)-0.1, center_cam2_W(2)-0.1, center_cam2_W(3)-0.1,'Cam 2','fontsize',10,'color','k','FontWeight','bold');
 
     axis equal
     rotate3d on;
