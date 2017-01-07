@@ -1,4 +1,4 @@
-function [ rotateCam2World, translateCam2World, initialState ] = initializeVO( initialFrame, secondFrame, debugging )
+function [ cameraRotation, cameraTranslation, initialState ] = initializeVO(K, initialFrame, secondFrame, debugging )
 %INITIALIZEVO - takes in two frames, outputs initial camera pose and 2D->3D world state
 %   Detailed explanation goes here
 
@@ -46,51 +46,40 @@ function [ rotateCam2World, translateCam2World, initialState ] = initializeVO( i
     end
 
 
-    %% Triangulation and outlier removal for initial landmarks
-    %(2D x 2 -> 3D)
-    %uses the 8-point algorithm and RANSAC
-
-    
-
-    %% Camera calibration
-    % will need to pull this from each dataset (e.g. K.txt, calib.txt, etc)
-
-    K = [7.188560000000e+02 0 6.071928000000e+02 
-            0 7.188560000000e+02 1.852157000000e+02
-            0 0 1];
-
-
     %% Find camera transformation
 
-    % get homogenized coordinates for all correspondences
+    % get homogenized coordinates for all keypoints
     homoKeypoints1 = [keypoints1(1:2, :); ones(1, size(keypoints1, 2))];
     homoKeypoints2 = [keypoints2(1:2, :); ones(1, size(keypoints2, 2))];
     
     % using RANSAC get best camera transformation approximation and the inlier keypoints
-    [rotateCam2World, translateCam2World, inliers] = performRANSAC(homoKeypoints1, homoKeypoints2, K);
+    [cameraRotation, cameraTranslation, inliers] = performRANSAC( ...
+        homoKeypoints1, homoKeypoints2, K);
     
-    
-    rotateCam2World
-    translateCam2World
+    % Remove all outliers
+    homoKeypoints1 = homoKeypoints1(:, inliers);
+    homoKeypoints2 = homoKeypoints2(:, inliers);
     
     
     %% Triangulate keypoints
 
-    % Get camera transformation for initial frame and second frame
-    camTransform1 = K * eye(3,4);
-    camTransform2 = K * [rotateCam2World, translateCam2World];
+    % Calculate camera transformation for initial frame and second frame
+    cameraTransform1 = K * eye(3,4);
+    cameraTransform2 = K * [cameraRotation, cameraTranslation];
     
-    % Triangulate the keypoints using the transformation obtained from RANSAC
-    worldKeypoints = linearTriangulation(homoKeypoints1, homoKeypoints2, camTransform1, camTransform2);
-    worldKeypoints = worldKeypoints(:, inliers);
-    validPoints = worldKeypoints(3, : ) > 0 & worldKeypoints(3,:) <= 100;
-    worldKeypoints =  worldKeypoints(:, validPoints);
+    % Triangulate the keypoints using the camera transformations
+    worldKeypoints = linearTriangulation( ...
+        homoKeypoints1, homoKeypoints2, ...
+        cameraTransform1, cameraTransform2);
 
 
     %% Plot
 
     % Visualize the 3-D scene
     figure(2),
+    
+    validPoints = worldKeypoints(3, :) > 0 & worldKeypoints(3,:) <= 100;
+    worldKeypoints =  worldKeypoints(:, validPoints);
 
     % P is a [4xN] matrix containing the triangulated point cloud (in
     % homogeneous coordinates), given by the function linearTriangulation
@@ -112,6 +101,9 @@ function [ rotateCam2World, translateCam2World, initialState ] = initializeVO( i
     %grid
 
     %transformWorld2Camera = T_C2_W;
+    
+    
+    %% Set up initial state
     
     % the initial state is the point tracker after the first step
     initialState = pointTracker;

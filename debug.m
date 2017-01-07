@@ -28,5 +28,10 @@ secondFrame = imread('kitti/00/image_0/000002.png');
 %secondFrame = imread('kitti/00/image_1/000000.png');
 %secondFrame = imread('parking/images/img_00050.png');
 
+%% Camera calibration
+K = [7.188560000000e+02 0 6.071928000000e+02 
+        0 7.188560000000e+02 1.852157000000e+02
+        0 0 1];
 
-[ transformWorld2Camera, initialState ] = initializeVO( initialFrame, secondFrame, 1 );
+
+[ transformWorld2Camera, initialState ] = initializeVO( K, initialFrame, secondFrame, 1 );
