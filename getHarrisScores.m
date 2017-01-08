@@ -1,4 +1,16 @@
-function [ harrisScores ] = getHarrisScores( frame, patchSize, traceWeight )
+function harrisScores = getHarrisScores(frame, patchSize, traceWeight)
+% HARRISSCORES - Generates Harris scores for a given frame
+%
+% Input: 
+%   - frame : Frame as image
+%   - patchSize : Size of patch for which the sum of derivates will be calculated
+%   - traceWeight : Weight given to the trace of the sums of the derivates
+%   while calculating the Harris score
+%
+% Output: 
+%   - harrisScores(M,N) : Padded matrix of harris scores for each pixel in
+%   the input frame
+%
 
     % convert frame to double
     frame = double(frame);

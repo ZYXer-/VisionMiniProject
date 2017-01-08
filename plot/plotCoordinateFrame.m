@@ -1,7 +1,8 @@
-function  [hline,hhead] = plotCoordinateFrame( rotation, origin, len, colors)
+function  [hline, hhead] = plotCoordinateFrame( rotation, origin, len, colors)
 % PLOTCOORDINATEFRAME - plots a 3d coordinate frame.
 %
-% [hline,hhead] = plotCoordinateFrame( rotation, origin, len)
+% Usage:
+%   [hline, hhead] = plotCoordinateFrame( rotation, origin, len, colors)
 %
 %  In the resulting plot x is red, y is green and z is blue.
 %

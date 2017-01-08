@@ -1,66 +1,64 @@
-function [ rotateCam2World, translateCam2World, landmarks, newState ] = ...
-    processFrame( rotateCam2World, translateCam2World, prevKeypoints, prevState, newFrame, K, doPlot )
-%PROCESSFRAME 
-%   should we save the old camera pose before every re-iteration (in main?)? (only takes
-%   in initial from initializeVO)
-%   input: 
-%       prevState
-%        - 3D landmarks and descriptor (for each, from last detection)
-%            - u v w 1 descriptorVector         <-- note: already homogeneous
-%        - 2D keypoints from prev frame
-       
+function [ cameraRotation, cameraTranslation, landmarks, pointTrackerState ] = ...
+    processFrame( cameraRotation, cameraTranslation, landmarks, pointTrackerState, newFrame, K, doPlot )
+% PROCESSFRAME - Takes a new frame as well as the previous camera 
+% transformation and state to generate the new camera transformation
+% and state.
+%
+% Input: 
+%   - cameraRotation(3,3) : The camera's previous 3x3 rotation matrix
+%   - cameraTranslation(3,1) : The camera's previous 3x1 translation vector
+%   - landmarks(2,N) : array of 2D keypoints from the previous frame
+%   - pointTrackerState : vision.PointTracker object with keypoints from the previous frame
+%   - newFrame : new frame to process
+%   - K(3,3) : camera calibration
+%   - doPlot : if 1, the keypoint correspondences will be plotted
+%
+% Output: 
+%   - cameraRotation(3,3) : The camera's new 3x3 rotation matrix
+%   - cameraTranslation(3,1) : The camera's new 3x1 translation vector
+%   - landmarks(2,N) : array of 2D keypoints from the new frame
+%   - pointTrackerState : vision.PointTracker object with keypoints from the new frame
+%
 
-% what do we want to "pass forward"? Just the pixel coordinates on
-% prevImage, or the full descriptor sets? 
+    % include plotting functions
+    addpath('plot/');
 
-% can use pointracker at the end of initializeVO and pass this to
-% processframe
-% at each iteration of processframe, pointtrack existing landmarks on to
-% new image
-% at this point we have 3d world points, from which we can use p3p
+    %% Constants
 
-addpath('plot/');
+    % constants for Harris scores
+    harrisPatchSize = 9;
+    harrisTraceWeight = 0.08;
 
-%% Constants
-
-% constants for Harris scores
-harrisPatchSize = 9;
-harrisTraceWeight = 0.08;
-
-% constants for keypoint selection
-
-minKeypointDistance = 8;
+    % constant for keypoint selection
+    minKeypointDistance = 8;
 
     % constants for RANSAC
     ransacIterations = 100;
     inlierToleranceInPx = 1.0;
+    
+    % how many keypoints should be passed to next interation
+    fillUpKeypointsToNum = 1000;
 
-% save old camera pose information
-prevRotateCam2World = rotateCam2World;
-prevTranslateCam2World = translateCam2World;
-
-
-%% Match keypoints between new frame and previous frame
-
-pointTracker = prevState;
-
-% get keypoint correspondences by doing a step with second frame
-[trackedPoints, trackedPointValidity] = step(pointTracker, newFrame);
-keypoints2 = fliplr(trackedPoints)';
-
-% remove all keypoints which aren't valid
-keypoints1 = prevKeypoints(:, trackedPointValidity == 1);
-keypoints2 = keypoints2(:, trackedPointValidity == 1);
-
-% plot new frame with keypoint correspondences
-if doPlot
-    plotMatching(keypoints2, keypoints1, newFrame);
-end
+    % save old camera transformation information
+    prevCameraRotation = cameraRotation;
+    prevCameraTranslation = cameraTranslation;
 
 
-%% Triangulation and outlier removal for new landmarks
-% 2D currentFrame points + 3D world landmark points for camera pose
-% 2D currentFrame points + 2D previousFrame points -> new 3D w landmarks
+    %% Match keypoints between new frame and previous frame
+
+    % get keypoint correspondences by doing a point tracker step with the new frame
+    [trackedPoints, trackedPointValidity] = step(pointTrackerState, newFrame);
+    release(pointTrackerState);
+    keypoints2 = fliplr(trackedPoints)';
+
+    % remove all keypoints which aren't valid
+    keypoints1 = landmarks(:, trackedPointValidity == 1);
+    keypoints2 = keypoints2(:, trackedPointValidity == 1);
+
+    % plot new frame with keypoint correspondences
+    if doPlot
+        plotMatching(keypoints1, keypoints2, newFrame);
+    end
 
 
     %% Find camera transformation
@@ -70,48 +68,34 @@ end
     homoKeypoints2 = [keypoints2(1:2, :); ones(1, size(keypoints2, 2))];
     
     % using RANSAC get best camera transformation approximation and the inlier keypoints
-    [rotateCam2World, translateCam2World, inliers] = ...
+    [cameraRotation, cameraTranslation, inliers] = ...
         performRANSAC(homoKeypoints1, homoKeypoints2, K, ransacIterations, inlierToleranceInPx);
     
+    % get new camera transformation
+    cameraRotation = cameraRotation * prevCameraRotation;
+    cameraTranslation = prevCameraTranslation + (prevCameraRotation * cameraTranslation);
     
-    %% Triangulate keypoints
-
-    % Get camera transformation for previous frame and new frame
-    camTransform1 = K * [prevRotateCam2World, prevTranslateCam2World];
-    camTransform2 = K * [rotateCam2World, translateCam2World];
     
-    % Triangulate the keypoints using the transformation obtained from RANSAC
-    worldKeypoints = linearTriangulation(homoKeypoints1, homoKeypoints2, camTransform1, camTransform2);
-    worldKeypoints = worldKeypoints(:, inliers);
-    validPoints = worldKeypoints(3, : ) > 0 & worldKeypoints(3,:) <= 25;
-    worldKeypoints =  worldKeypoints(:, validPoints);
+    %% Generate new landmarks from the new frame
     
+    % only keep inlier keypoints
     keypoints2 = keypoints2(1:2, inliers);
-
-    rotateCam2World =  rotateCam2World * prevRotateCam2World;
-    translateCam2World = prevTranslateCam2World + (prevRotateCam2World * translateCam2World);
-    
-    %% Generate (potentially) new landmarks from the new frame
 
     % calculate Harris scores
     harrisScores = getHarrisScores(newFrame, harrisPatchSize, harrisTraceWeight);
 
-
-    fillUpKeypointsToNum = 1000;
-
-
-    % select keypoints
+    % select new keypoints
     numOfKeypoints = fillUpKeypointsToNum - size(keypoints2, 2);
     newKeypoints = selectKeypoints(harrisScores, numOfKeypoints, minKeypointDistance, keypoints2);
     
-    % merge new frame keypoints with the existing inliers
+    
+    %% Set up next state
+    
+    % get landmarks for next frame by merging this frame's new keypoints with the existing inliers
     landmarks = [newKeypoints, keypoints2];
 
-    % the initial state is the point tracker after the first step
-    release(pointTracker);
-
-    initialize(pointTracker, fliplr(landmarks'), newFrame);
-    newState = pointTracker;
+    % create point tracker state with this frame and the landmarks
+    initialize(pointTrackerState, fliplr(landmarks'), newFrame);
 
 
 end

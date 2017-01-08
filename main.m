@@ -1,16 +1,18 @@
 %% Setup
-ds = 1; % 0: KITTI, 1: Malaga, 2: parking
-plotEveryXFrames = 3;
 
+ds = 0; % 0: KITTI, 1: Malaga, 2: parking
+plotEveryXFrames = 25; % Number of frames after which plot is redrawn (1 = every frame)
 
+% manually selected bootstrap frames
 bootstrap_frames = [1, 3];
+
+% paths to frame sets
 kitti_path = 'kitti';
 parking_path = 'parking';
 malaga_path = 'malaga';
 
 
 if ds == 0
-    % need to set kitti_path to folder containing "00" and "poses"
     assert(exist('kitti_path', 'var') ~= 0);
     ground_truth = load([kitti_path '/poses/00.txt']);
     ground_truth = ground_truth(:, [end-8 end]);
@@ -19,7 +21,6 @@ if ds == 0
         0 7.188560000000e+02 1.852157000000e+02
         0 0 1];
 elseif ds == 1
-    % Path containing the many files of Malaga 7.
     assert(exist('malaga_path', 'var') ~= 0);
     images = dir([malaga_path ...
         '/malaga-urban-dataset-extract-07_rectified_800x600_Images']);
@@ -29,7 +30,6 @@ elseif ds == 1
         0 621.18428 309.05989
         0 0 1];
 elseif ds == 2
-    % Path containing images, depths and all...
     assert(exist('parking_path', 'var') ~= 0);
     last_frame = 598;
     K = load([parking_path '/K.txt']);
@@ -40,8 +40,8 @@ else
     assert(false);
 end
 
+
 %% Bootstrap
-% need to set bootstrap_frames
 if ds == 0
     img0 = imread([kitti_path '/00/image_0/' ...
         sprintf('%06d.png',bootstrap_frames(1))]);
@@ -63,15 +63,24 @@ else
     assert(false);
 end
 
+
+%% Initialize visual odometry pipeline
+
+% additionally plot 3D keypoint cloud during initializeVO
+debugging = 1;
+
 % initializeVO
 [cameraRotation, cameraTranslation, keypoints, state] = ...
-    initializeVO(K, img0, img1, 1);
+    initializeVO(K, img0, img1, debugging);
 
-locationHistoryForPlot = [0; 0; 0];
+% setup list of camera translations for plotting
+locationHistoryForPlot = [[0; 0; 0], cameraTranslation];
 firstPlot = 1;
 
-%% Continuous operation
-range = (bootstrap_frames(2)+1):last_frame; % for everything after boot frames...
+
+%% Continuous operation of visual odometry pipeline
+
+range = (bootstrap_frames(2)+1):last_frame;
 for i = range
     fprintf('\n\nProcessing frame %d\n=====================\n', i);
     if ds == 0
@@ -86,41 +95,27 @@ for i = range
     else
         assert(false); 
     end
-    % process the new frame (image) from the sequence
     
-    locationHistoryForPlot = [locationHistoryForPlot, cameraTranslation];
+    % check if plot should be redrawn in this iteration
     doPlot = mod(i, plotEveryXFrames) == 0 || firstPlot;
     
+    % processFrame
     [cameraRotation, cameraTranslation, keypoints, state] = ...
         processFrame( cameraRotation, cameraTranslation, keypoints, state, image, K, doPlot );
+    
+    % add camera translaton to list for plotting
+    locationHistoryForPlot = [locationHistoryForPlot, cameraTranslation];
 
+    % redraw plot
     if doPlot
-        locationHistoryForPlot = [locationHistoryForPlot, cameraTranslation];
-        figure(1),
-        subplot(3, 1, [2; 3]);
-        xlabel('x'), ylabel('y'), zlabel('z');
-        axis equal;
-        rotate3d on;
-        hold on;
-        % Display camera pose
-        % multiply delta rotation and add delta translation
-
-        for j = 1 : (size(locationHistoryForPlot, 2) - 1)
-            xFrom = locationHistoryForPlot(1, j);
-            xTo = locationHistoryForPlot(1, j + 1);
-            yFrom = locationHistoryForPlot(2, j);
-            yTo = locationHistoryForPlot(2, j + 1);
-            plot([yFrom; yTo], [xFrom; xTo], 'b-', 'Linewidth', 2);
-        end
+        plotCameraLocationHistory(locationHistoryForPlot);
         
-        locationHistoryForPlot = [];
+        % reset list of camera translations
+        locationHistoryForPlot = cameraTranslation;
         firstPlot = 0;
+        
+        % Makes sure that plots refresh.    
+        pause(0.01);
     end
     
-    % Makes sure that plots refresh.    
-    pause(0.01);
-    
-    % processFrame
-    
-    prev_img = image;
 end

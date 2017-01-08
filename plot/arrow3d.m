@@ -1,7 +1,7 @@
 function varargout=arrow3d(start,stop,ang,ltype,p,n)
 %   Plot 3d Arrows
 % 
-%   This functin is used to draw 3D-arrows. The size of arrow head is
+%   This function is used to draw 3D-arrows. The size of arrow head is
 %   decided by the minimum distance between start and stop.
 %   
 %   

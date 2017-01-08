@@ -1,3 +1,4 @@
+function M = cross2Matrix(x)
 % CROSS2MATRIX  Antisymmetric matrix corresponding to a 3-vector
 %
 % Computes the antisymmetric matrix M corresponding to a 3-vector x such
@@ -10,8 +11,7 @@
 %   - M(3,3) : antisymmetric matrix
 %
 
-function M = cross2Matrix(x)
-M = [0    -x(3)  x(2);
-     x(3)   0   -x(1);
-    -x(2)  x(1)   0  ];
+    M = [0    -x(3)  x(2);
+         x(3)   0   -x(1);
+        -x(2)  x(1)   0  ];
 

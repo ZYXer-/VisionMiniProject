@@ -1,7 +1,20 @@
 function [cameraRotation, cameraTranslation, inlierKeypoints, pointTrackerState] = ...
     initializeVO(K, initialFrame, secondFrame, debugging)
-%INITIALIZEVO - takes in two frames, outputs initial camera pose and 2D->3D world state
-%   Detailed explanation goes here
+% INITIALIZEVO - Takes in two frames, outputs initial camera pose and the
+% initial state for continious operation.
+%
+% Input: 
+%   - K(3,3) : camera calibration
+%   - initialFrame : first initialization frame
+%   - secondFrame : second initialization frame
+%   - debugging : if 1 keypoint cloud will be plotted
+%
+% Output: 
+%   - cameraRotation(3,3) : initial camera rotation
+%   - cameraTranslation(3,1) : initial camera translation
+%   - inlierKeypoints(2,N) : array of 2D keypoints from the second frame
+%   - pointTrackerState : vision.PointTracker object with keypoints from the second frame
+%
 
     % include plotting functions
     addpath('plot/');
@@ -14,11 +27,11 @@ function [cameraRotation, cameraTranslation, inlierKeypoints, pointTrackerState]
     harrisTraceWeight = 0.08;
 
     % constants for keypoint selection
-    numOfKeypoints = 200;
-    minKeypointDistance = 6;
+    numOfKeypoints = 1000;
+    minKeypointDistance = 8;
     
     % constants for RANSAC
-    ransacIterations = 1000;
+    ransacIterations = 500;
     inlierToleranceInPx = 1.0;
 
 
@@ -46,10 +59,8 @@ function [cameraRotation, cameraTranslation, inlierKeypoints, pointTrackerState]
     keypoints1 = keypoints1(:, trackedPointValidity == 1);
     keypoints2 = keypoints2(:, trackedPointValidity == 1);
 
-    % debug keypoint matching
-    if debugging == 1
-        plotMatching(keypoints2, keypoints1, secondFrame);
-    end
+    % plot keypoint matching
+    plotMatching(keypoints1, keypoints2, secondFrame);
 
 
     %% Find camera transformation
@@ -63,21 +74,11 @@ function [cameraRotation, cameraTranslation, inlierKeypoints, pointTrackerState]
         homoKeypoints1, homoKeypoints2, K, ...
         ransacIterations, inlierToleranceInPx);
     
-    % Remove all outliers
-    homoKeypoints1 = homoKeypoints1(:, inliers);
-    homoKeypoints2 = homoKeypoints2(:, inliers);
     
-    
-    %% Triangulate keypoints
-
-    % Calculate camera transformation for initial frame and second frame
-    cameraTransform1 = K * eye(3,4);
-    cameraTransform2 = K * [cameraRotation, cameraTranslation];
-    
-    % Triangulate the keypoints using the camera transformations
-    worldKeypoints = linearTriangulation( ...
-        homoKeypoints1, homoKeypoints2, ...
-        cameraTransform1, cameraTransform2);
+    %% Plot triangulated keypoints for debugging
+    if debugging
+        plotKeypointCloud(homoKeypoints1, homoKeypoints2, inliers, K, cameraRotation, cameraTranslation);        
+    end
     
     
     %% Set up initial state

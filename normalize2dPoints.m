@@ -1,3 +1,4 @@
+function [newpts, T] = normalize2dPoints(pts)
 % NORMALIZE2DPOINTS - normalises 2D homogeneous points
 %
 % Function translates and normalises a set of 2D homogeneous points 
@@ -6,16 +7,13 @@
 %
 % Usage:   [newpts, T] = normalise2dpts(pts)
 %
-% Argument:
+% Input:
 %   pts -  3xN array of 2D homogeneous coordinates
 %
-% Returns:
+% Output:
 %   newpts -  3xN array of transformed 2D homogeneous coordinates.
 %   T      -  The 3x3 transformation matrix, newpts = T*pts
 %
-
-
-function [newpts, T] = normalize2dPoints(pts)
 
     num_points = length(pts);
 
